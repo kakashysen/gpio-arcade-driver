@@ -36,18 +36,18 @@ inputList = [{'channel':7, 'active':False, 'input_type':uinput.ABS_Y,'center_val
              {'channel':13, 'active':False, 'input_type':uinput.ABS_Y,'center_value':128, 'move_value':255},
              {'channel':15, 'active':False, 'input_type':uinput.ABS_X,'center_value':128, 'move_value':255},
              {'channel':16, 'active':False, 'input_type':uinput.ABS_X,'center_value':128, 'move_value':0}]
-
+'''
 def detectJoystickMovements(inputDict):
    if inputDict['active'] and not GPIO.input(inputDict['channel']):
-    inputDict['active']=False
-    device.emit(inputDict['input_type'],inputDict['center_value'])
-  elif not inputDict['active'] and GPIO.input(inputDict['channel']):
-    inputDict['active']=True
-    device.emit(inputDict['input_type'], inputDict['move_value'])
-
+      inputDict['active']=False
+      device.emit(inputDict['input_type'],inputDict['center_value'])
+  #elif not inputDict['active'] and GPIO.input(inputDict['channel']):
+     #inputDict['active']=True
+     #device.emit(inputDict['input_type'], inputDict['move_value'])
+     
 while True:
   for inputDict in inputList:
-    detectJoystick
+    detectJoystickMovements(inputDict)
 
 '''
 while True:
@@ -79,9 +79,11 @@ while True:
     left=True
     device.emit(uinput.ABS_X,0)
     
-  if fire and not GPIOa.input(11):
+  if fire and not GPIO.input(11):
     fire=False
+    device.emit(uinput.KEY_A,0)
   elif GPIO.event_detected(11):
-    device.emit_click(uinput.KEY_A)
-''' 
+    fire=True
+    device.emit(uinput.KEY_A,1)
+ 
 GPIO.cleanup()
