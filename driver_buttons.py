@@ -2,6 +2,8 @@
 import RPi.GPIO as GPIO
 import uinput
 import time
+import thread
+from evdev import UInput, ecodes as e
 
 #setup GPIUO using Board numbering
 GPIO.setmode(GPIO.BOARD)
@@ -16,7 +18,7 @@ GPIO.setup(16, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #left P1
 # add event for fire button
 GPIO.add_event_detect(11, GPIO.RISING, bouncetime=200)
 
-fire=False
+jump=False
 up=False
 down=False
 right=False
@@ -50,6 +52,65 @@ while True:
     detectJoystickMovements(inputDict)
 
 '''
+def jumpFunction(threadName, delay):
+  jump=False
+  while True:
+    if GPIO.input(11):
+      jump=True
+      with UInput() as ui:
+        ui.write(e.EV_KEY, e.KEY_A, 2)
+        ui.syn()
+      print("jump")
+    elif jump and not GPIO.input(11):
+      jump=False
+      with UInput() as ui:
+        ui.write(e.EV_KEY, e.KEY_A, 1)
+        ui.syn()
+      print("stop jump")
+    time.sleep(delay)
+
+def rightFunction(threadName, delay):
+  right=False
+  while True:
+    if GPIO.input(15):
+      right=True
+      with UInput() as ui:
+        ui.write(e.EV_KEY, e.KEY_RIGHT, 2)
+        ui.syn()
+      print("rigth")
+    elif right and not GPIO.input(15):
+      right=False
+      with UInput() as ui:
+        ui.write(e.EV_KEY, e.KEY_RIGHT, 1)
+        ui.syn()
+      print("stop right")
+    time.sleep(delay)
+
+def leftFunction(threadName, delay):
+  left=False
+  while True:
+    if GPIO.input(16):
+      left=True
+      with UInput() as ui:
+        ui.write(e.EV_KEY, e.KEY_LEFT, 2)
+        ui.syn()
+      print("left")
+    elif left and not GPIO.input(16):
+      left=False
+      with UInput() as ui:
+        ui.write(e.EV_KEY, e.KEY_LEFT, 1)
+        ui.syn()
+      print("stop left")
+    time.sleep(delay)
+
+try:
+  thread.start_new_thread( jumpFunction, ("Jump", 0.05, ) )
+  thread.start_new_thread( rightFunction, ("right", 0.05, ) )
+  thread.start_new_thread( leftFunction, ("left", 0.05, ) )
+except:
+  print "Error: unable to start thread"
+
+'''
 while True:
   if up and not GPIO.input(7):
     up=False
@@ -65,25 +126,46 @@ while True:
     down=True
     device.emit(uinput.ABS_Y,255)
     
-  if right and not GPIO.input(15):
-    right=False
-    device.emit(uinput.ABS_X,128)
-  elif not right and GPIO.input(15):
+  if GPIO.input(15):
     right=True
-    device.emit(uinput.ABS_X,255)
-    
-  if left and not GPIO.input(16):
-    left=False
-    device.emit(uinput.ABS_X,128)
-  elif not left and GPIO.input(16):
+    with UInput() as ui:
+      ui.write(e.EV_KEY, e.KEY_RIGHT, 2)
+      ui.syn()
+    print("rigth")
+  elif right and not GPIO.input(15):
+    right=False
+    with UInput() as ui:
+      ui.write(e.EV_KEY, e.KEY_RIGHT, 1)
+      ui.syn()
+    print("stop right")
+ 
+  if GPIO.input(16):
     left=True
-    device.emit(uinput.ABS_X,0)
+    with UInput() as ui:
+      ui.write(e.EV_KEY, e.KEY_LEFT, 2)
+      ui.syn()
+    print("left")
+  elif left and not GPIO.input(16):
+    left=False
+    with UInput() as ui:
+      ui.write(e.EV_KEY, e.KEY_LEFT, 1)
+      ui.syn()
+    print("stop left")
     
-  if fire and not GPIO.input(11):
-    fire=False
-    device.emit(uinput.KEY_A,0)
-  elif GPIO.event_detected(11):
-    fire=True
-    device.emit(uinput.KEY_A,1)
+  if GPIO.input(11):
+    jump=True
+    with UInput() as ui:
+      ui.write(e.EV_KEY, e.KEY_A, 2)
+      ui.syn()
+    print("jump")
+  elif jump and not GPIO.input(11):
+    jump=False
+    with UInput() as ui:
+      ui.write(e.EV_KEY, e.KEY_A, 1)
+      ui.syn()
+    print("stop jump")
+
+  time.sleep(0.01)
+'''
  
 GPIO.cleanup()
