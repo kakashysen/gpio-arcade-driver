@@ -31,13 +31,14 @@ device = uinput.Device([
   uinput.ABS_Y,
   ])
 
+ui = UInput()
 
 inputList = [{'channel':7, 'active':False, 'input_type':uinput.ABS_Y,'center_value':128, 'move_value':0},
              {'channel':13, 'active':False, 'input_type':uinput.ABS_Y,'center_value':128, 'move_value':255},
              {'channel':15, 'active':False, 'input_type':uinput.ABS_X,'center_value':128, 'move_value':255},
              {'channel':16, 'active':False, 'input_type':uinput.ABS_X,'center_value':128, 'move_value':0}]
 
-def jumpFunction(GPIO, threadName, delay):
+def jumpFunction(threadName, delay):
   jump=False
   while True:
     if GPIO.input(11):
@@ -88,11 +89,19 @@ def leftFunction(threadName, delay):
       print("stop left")
     time.sleep(delay)
 
-try:
-  thread.start_new_thread( jumpFunction, (GPIO, "Jump", 0.05, ) )
-  #thread.start_new_thread( rightFunction, ("right", 0.05, ) )
-  #thread.start_new_thread( leftFunction, ("left", 0.05, ) )
-except:
-  print "Error: unable to start thread"
+while True:
+  if GPIO.input(11):
+    jump=True
+    ui.write(e.EV_KEY, e.KEY_A, 2)
+    ui.write(e.EV_KEY, e.KEY_A, 0)
+    ui.syn()
+    print("jump")
+  elif jump and not GPIO.input(11):
+    jump=False
+    ui.write(e.EV_KEY, e.KEY_A, 1)
+    ui.write(e.EV_KEY, e.KEY_A, 0)
+    ui.syn()
+    print("stop jump")
 
+  time.sleep(0.08)
 GPIO.cleanup()
