@@ -5,20 +5,9 @@ import time
 import thread
 from evdev import UInput, ecodes as e
 
-#setup GPIUO using Board numbering
+#setup GPIO using Board numbering
 GPIO.setmode(GPIO.BOARD)
-
 ui = UInput()
-
-# Player 1
-GPIO.setup(11, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #fire P1
-GPIO.setup(7, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)  #up P1
-GPIO.setup(13, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #down P1
-GPIO.setup(15, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #right P1
-GPIO.setup(16, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #left P1
-
-# add event for fire button
-GPIO.add_event_detect(11, GPIO.RISING, bouncetime=200)
 
 jump=False
 up=False
@@ -26,109 +15,77 @@ down=False
 right=False
 left=False
 
-device = uinput.Device([
-  uinput.KEY_A,
-  uinput.KEY_B,
-  uinput.ABS_X,
-  uinput.ABS_Y,
-  ])
+#####################################################################
+# List of dictionaries with the controlls configuration
+# each dictionary contains the next keys
+# <pin_number>, the number of the pin in the GPIO Pi
+# <is_pressed>, the boolean value indicate if the button is 
+# pressed
+# <event_type>, the event type generated when button is pressed
+#####################################################################
+inputList = [{'pin_number':7, 'is_pressed':False, 'event_type':e.KEY_W},  #P1 UP
+             {'pin_number':8, 'is_pressed':False, 'event_type':e.KEY_S},  #P1 DOWN
+             {'pin_number':10, 'is_pressed':False, 'event_type':e.KEY_A}, #P1 LEFT
+             {'pin_number':11, 'is_pressed':False, 'event_type':e.KEY_D}, #P1 RIGHT
+             {'pin_number':12, 'is_pressed':False, 'event_type':e.KEY_H}, #P1 START
+             {'pin_number':13, 'is_pressed':False, 'event_type':e.KEY_G}, #P1 SELECT
+             {'pin_number':15, 'is_pressed':False, 'event_type':e.KEY_R}, #P1 A
+             {'pin_number':16, 'is_pressed':False, 'event_type':e.KEY_T}, #P1 B
+             {'pin_number':18, 'is_pressed':False, 'event_type':e.KEY_Y}, #P1 X
+             {'pin_number':19, 'is_pressed':False, 'event_type':e.KEY_U}, #P1 Y
+             {'pin_number':21, 'is_pressed':False, 'event_type':e.KEY_Q}, #P1 LEFT BOTTOM
+             {'pin_number':22, 'is_pressed':False, 'event_type':e.KEY_E}, #P1 RIGHT BOTTOM
+             {'pin_number':23, 'is_pressed':False, 'event_type':e.KEY_UP},    #P2 UP
+             {'pin_number':24, 'is_pressed':False, 'event_type':e.KEY_DOWN},  #P2 DOWN
+             {'pin_number':26, 'is_pressed':False, 'event_type':e.KEY_LEFT},  #P2 LEFT
+             {'pin_number':29, 'is_pressed':False, 'event_type':e.KEY_RIGHT}, #P2 RIGHT
+             {'pin_number':31, 'is_pressed':False, 'event_type':e.KEY_7},     #P2 START
+             {'pin_number':32, 'is_pressed':False, 'event_type':e.KEY_8},     #P2 SELECT
+             {'pin_number':33, 'is_pressed':False, 'event_type':e.KEY_4},     #P2 A
+             {'pin_number':35, 'is_pressed':False, 'event_type':e.KEY_5},     #P2 B
+             {'pin_number':36, 'is_pressed':False, 'event_type':e.KEY_1},     #P2 X
+             {'pin_number':37, 'is_pressed':False, 'event_type':e.KEY_2},     #P2 Y
+             {'pin_number':38, 'is_pressed':False, 'event_type':e.KEY_0},     #P2 LEFT BOTTOM
+             {'pin_number':40, 'is_pressed':False, 'event_type':e.KEY_3},     #P2 RIGHT BOTTOM
+	    ]
 
 
-inputList = [{'channel':7, 'active':False, 'input_type':uinput.ABS_Y,'center_value':128, 'move_value':0},
-             {'channel':13, 'active':False, 'input_type':uinput.ABS_Y,'center_value':128, 'move_value':255},
-             {'channel':15, 'active':False, 'input_type':uinput.ABS_X,'center_value':128, 'move_value':255},
-             {'channel':16, 'active':False, 'input_type':uinput.ABS_X,'center_value':128, 'move_value':0}]
+#####################
+# Setup GPIO pins
+#####################
+def setupGPIO():
+  for inputKey in inputList:
+    pinNumber = inputKey['pin_number']
+    GPIO.setup(pinNumber, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
 
-def jumpFunction(threadName, delay):
-  jump=False
-  while True:
-    if GPIO.input(11):
-      jump=True
-      with UInput() as ui:
-        ui.write(e.EV_KEY, e.KEY_A, 2)
-        ui.syn()
-      print("jump")
-    elif jump and not GPIO.input(11):
-      jump=False
-      with UInput() as ui:
-        ui.write(e.EV_KEY, e.KEY_A, 1)
-        ui.syn()
-      print("stop jump")
-    time.sleep(delay)
+##################################
+# generate keyboard inputs 
+##################################
+def keyboardEventsGenerator():
+  for inputKey in inputList:
+    pinNumber = inputKey['pin_number']
+    isPressed = inputKey['is_pressed']
+    eventType = inputKey['event_type'] 
+    if GPIO.input(pinNumber):
+      inputKey['pressed'] = True
+      ui.write(e.EV_KEY, eventType, 2)
+      ui.write(e.EV_KEY, eventType, 0)
+      ui.syn()
+     # print "key {} pressed".format(eventType)
+    elif isPressed and not GPIO.input(pinNumber):
+      inputKey['pressed'] = False
+      ui.write(e.EV_KEY, eventType, 1)
+      ui.write(e.EV_KEY, eventType, 0)
+      ui.syn()
+    # print "key {} release".format(eventType)
 
-def rightFunction(threadName, delay):
-  right=False
-  while True:
-    if GPIO.input(15):
-      right=True
-      with UInput() as ui:
-        ui.write(e.EV_KEY, e.KEY_RIGHT, 2)
-        ui.syn()
-      print("rigth")
-    elif right and not GPIO.input(15):
-      right=False
-      with UInput() as ui:
-        ui.write(e.EV_KEY, e.KEY_RIGHT, 1)
-        ui.syn()
-      print("stop right")
-    time.sleep(delay)
 
-def leftFunction(threadName, delay):
-  left=False
-  while True:
-    if GPIO.input(16):
-      left=True
-      with UInput() as ui:
-        ui.write(e.EV_KEY, e.KEY_LEFT, 2)
-        ui.syn()
-      print("left")
-    elif left and not GPIO.input(16):
-      left=False
-      with UInput() as ui:
-        ui.write(e.EV_KEY, e.KEY_LEFT, 1)
-        ui.syn()
-      print("stop left")
-    time.sleep(delay)
-
+########################################################################
+# start program
+######################################################################## 
+setupGPIO()
 while True:
-  if GPIO.input(15):
-    right=True
-    ui.write(e.EV_KEY, e.KEY_RIGHT, 2)
-    ui.write(e.EV_KEY, e.KEY_RIGHT, 0)
-    ui.syn()
-    print("rigth")
-  elif right and not GPIO.input(15):
-    right=False
-    ui.write(e.EV_KEY, e.KEY_RIGHT, 1)
-    ui.write(e.EV_KEY, e.KEY_RIGHT, 0)
-    ui.syn()
-    print("stop right")
- 
-  if GPIO.input(16):
-    left=True
-    ui.write(e.EV_KEY, e.KEY_LEFT, 2)
-    ui.write(e.EV_KEY, e.KEY_LEFT, 0)
-    ui.syn()
-    print("left")
-  elif left and not GPIO.input(16):
-    left=False
-    ui.write(e.EV_KEY, e.KEY_LEFT, 1)
-    ui.write(e.EV_KEY, e.KEY_LEFT, 0)
-    ui.syn()
-    print("stop left")
-    
-  if GPIO.input(11):
-    jump=True
-    ui.write(e.EV_KEY, e.KEY_A, 2)
-    ui.write(e.EV_KEY, e.KEY_A, 0)
-    ui.syn()
-    print("jump")
-  elif jump and not GPIO.input(11):
-    jump=False
-    ui.write(e.EV_KEY, e.KEY_A, 1)
-    ui.write(e.EV_KEY, e.KEY_A, 0)
-    ui.syn()
-    print("stop jump")
+  keyboardEventsGenerator()
+  time.sleep=(0.025)
 
-  time.sleep(0.025)
 GPIO.cleanup()
