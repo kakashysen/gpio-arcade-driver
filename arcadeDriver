@@ -1,0 +1,4 @@
+#! /bin/bash
+modprobe uinput
+python /home/pi/gpio-arcade-driver/driver_buttons_loop.py
+exit 0

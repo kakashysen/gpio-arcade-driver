@@ -7,6 +7,7 @@ from evdev import UInput, ecodes as e
 
 #setup GPIO using Board numbering
 GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)
 ui = UInput()
 
 jump=False
@@ -25,8 +26,8 @@ left=False
 #####################################################################
 inputList = [{'pin_number':7, 'is_pressed':False, 'event_type':e.KEY_W},  #P1 UP
              {'pin_number':8, 'is_pressed':False, 'event_type':e.KEY_S},  #P1 DOWN
-             {'pin_number':10, 'is_pressed':False, 'event_type':e.KEY_A}, #P1 LEFT
-             {'pin_number':11, 'is_pressed':False, 'event_type':e.KEY_D}, #P1 RIGHT
+             {'pin_number':10, 'is_pressed':False, 'event_type':e.KEY_D}, #P1 RIGHT
+             {'pin_number':11, 'is_pressed':False, 'event_type':e.KEY_A}, #P1 LEFT
              {'pin_number':12, 'is_pressed':False, 'event_type':e.KEY_H}, #P1 START
              {'pin_number':13, 'is_pressed':False, 'event_type':e.KEY_G}, #P1 SELECT
              {'pin_number':15, 'is_pressed':False, 'event_type':e.KEY_R}, #P1 A
@@ -58,34 +59,36 @@ def setupGPIO():
     pinNumber = inputKey['pin_number']
     GPIO.setup(pinNumber, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
 
-##################################
+#xcruz#################################
 # generate keyboard inputs 
 ##################################
-def keyboardEventsGenerator():
-  for inputKey in inputList:
-    pinNumber = inputKey['pin_number']
-    isPressed = inputKey['is_pressed']
-    eventType = inputKey['event_type'] 
-    if GPIO.input(pinNumber):
-      inputKey['pressed'] = True
-      ui.write(e.EV_KEY, eventType, 2)
-      ui.write(e.EV_KEY, eventType, 0)
-      ui.syn()
-     # print "key {} pressed".format(eventType)
-    elif isPressed and not GPIO.input(pinNumber):
-      inputKey['pressed'] = False
-      ui.write(e.EV_KEY, eventType, 1)
-      ui.write(e.EV_KEY, eventType, 0)
-      ui.syn()
-    # print "key {} release".format(eventType)
-
-
-########################################################################
+def keyboardEventsGenerator(inputKey):
+  pinNumber = inputKey['pin_number']
+  isPressed = inputKey['is_pressed']
+  eventType = inputKey['event_type'] 
+  if not isPressed and GPIO.input(pinNumber):
+    inputKey['is_pressed'] = True
+    ui.write(e.EV_KEY, eventType, 2)
+    ui.write(e.EV_KEY, eventType, 0)
+    ui.syn()
+    print "pin {} pressed".format(pinNumber)
+  if isPressed and not GPIO.input(pinNumber):
+    inputKey['is_pressed'] = False
+    ui.write(e.EV_KEY, eventType, 1)
+    ui.write(e.EV_KEY, eventType, 0)
+    ui.syn()
+    print "pin {} release".format(pinNumber)
+  return
+#####################################################################
 # start program
 ######################################################################## 
 setupGPIO()
-while True:
-  keyboardEventsGenerator()
-  time.sleep=(0.025)
-
-GPIO.cleanup()
+try:
+  while True:
+    for inputKey in inputList:
+      thread.start_new_thread(keyboardEventsGenerator,(inputKey,))
+    time.sleep(0.025)
+except:
+  print "error keyboars", sys.exc_info()[0]
+finally:
+  GPIO.cleanup()
